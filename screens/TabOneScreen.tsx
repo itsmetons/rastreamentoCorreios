@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   SafeAreaView,
   FlatList,
@@ -10,39 +11,40 @@ import {
 } from "react-native";
 import BannerAdMob from "./../components/admob/banner";
 import { Text, View } from "../components/Themed";
-
-const DATA = [
-  {
-    id: "bd7acbea-c1b1-46c2-aed5-3ad53abb28ba",
-    title: "First Item",
-  },
-  {
-    id: "3ac68afc-c605-48d3-a4f8-fbd91aa97f63",
-    title: "Second Item",
-  },
-  {
-    id: "58694a0f-3da1-471f-bd96-145571e29d72",
-    title: "Third Item",
-  },
-];
-
-const Item = ({ title }: any) => (
-  <View style={styles.item}>
-    <Text style={styles.title}>{title}</Text>
-  </View>
-);
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function TabOneScreen() {
+  useEffect(() => {
+    loadTracks();
+  }, []);
+
+  const loadTracks = async () => {
+    const tracks: any = await AsyncStorage.getItem("@storage_tracks");
+    setData(tracks != null ? JSON.parse(tracks) : []);
+  };
+
+  const navegation = useNavigation();
+  const viewTimeLine = (track: any) => {
+    navegation.navigate("TimeLine", { track });
+  };
+
+  const [data, setData] = useState([]);
   const [packageDescription, setPackageDescription] = useState("");
   const [packageCode, setPackageCode] = useState("");
 
   const [modalVisible, setModalVisible] = useState(false);
 
-  const renderItem = ({ item }: any) => <Item title={item.title} />;
-
   const clickHandler = () => {
-    //function to handle click on floating Action Button
     setModalVisible(true);
+  };
+
+  const addPackage = async () => {
+    const tracks: any = data ?? [];
+    tracks.push({ description: packageDescription, code: packageCode });
+    console.log(tracks);
+
+    await AsyncStorage.setItem("@storage_tracks", JSON.stringify(tracks));
+    loadTracks();
   };
 
   return (
@@ -95,6 +97,9 @@ export default function TabOneScreen() {
                   textAlign: "right",
                   color: "#008000",
                 }}
+                onPress={() => {
+                  addPackage();
+                }}
               >
                 SALVAR
               </Text>
@@ -104,9 +109,19 @@ export default function TabOneScreen() {
       </Modal>
 
       <FlatList
-        data={DATA}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        data={data}
+        renderItem={({ item }: any) => (
+          <TouchableOpacity
+            onPress={() => {
+              viewTimeLine(item);
+            }}
+          >
+            <View style={styles.item}>
+              <Text style={styles.title}>{item.description}</Text>
+              <Text>{item.code}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
       />
 
       <TouchableOpacity
