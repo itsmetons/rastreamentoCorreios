@@ -19,21 +19,19 @@ export default function TimeLine({
   const loadTrack = async (track: any) => {
     const logs: any = [];
     const response = await Api.get("track/" + track.code);
-    console.log(response.data);
+
     response.data[0].tracks.forEach((item: any, index: any) => {
       logs.push({
         time: new Date(item.trackedAt)
           .toLocaleDateString("pt-BR", {
-            timeZone: "UTC",
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
-            hour: "numeric",
-            minute: "numeric",
           })
           .replace(" ", "\n"),
         title: item.status,
-        description: item.observation,
+        description: (item.observation == null ? "" : item.observation + "\n")
+          + item.locale,
         icon: (
           <Ionicons
             name="location"

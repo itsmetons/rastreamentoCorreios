@@ -44,7 +44,10 @@ export default function TabOneScreen() {
     console.log(tracks);
 
     await AsyncStorage.setItem("@storage_tracks", JSON.stringify(tracks));
+    setPackageCode("");
+    setPackageDescription("")
     loadTracks();
+    clickHandler()
   };
 
   return (
