@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, StatusBar } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Text, View } from "../components/Themed";
 import Timeline from "react-native-timeline-flatlist";
@@ -18,20 +18,21 @@ export default function TimeLine({
 
   const loadTrack = async (track: any) => {
     const logs: any = [];
-    const response = await Api.get("track/" + track.code);
+    const response = await Api.post("rastreio", {
+      type: "LS",
+      code: track.code,
+    });
 
-    response.data[0].tracks.forEach((item: any, index: any) => {
+    response.data.objeto[0].evento.forEach((item: any, index: any) => {
       logs.push({
-        time: new Date(item.trackedAt)
-          .toLocaleDateString("pt-BR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          })
-          .replace(" ", "\n"),
-        title: item.status,
-        description: (item.observation == null ? "" : item.observation + "\n")
-          + item.locale,
+        time: (item.data + " " + item.hora).replace(" ", "\n"),
+        title: item.descricao,
+        description:
+          item.unidade.local +
+          (typeof item.unidade.cidade !== "undefined" &&
+          item.unidade.cidade !== null
+            ? "\n" + item.unidade.cidade + "/" + item.unidade.uf
+            : ""),
         icon: (
           <Ionicons
             name="location"
@@ -63,10 +64,13 @@ export default function TimeLine({
         circleColor="rgba(255,255,255,9)"
         lineColor="rgb(45,156,219)"
         innerCircle={"icon"}
+        titleStyle={styles.titleStyle}
+        descriptionStyle={styles.titleStyle}
         timeStyle={{
           textAlign: "center",
-          paddingVertical: 15,
+          paddingVertical: 10,
           paddingHorizontal: 5,
+          color: "#fff",
         }}
       />
     </View>
@@ -76,12 +80,16 @@ export default function TimeLine({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: StatusBar.currentHeight || 0,
     padding: 20,
     paddingTop: 65,
-    backgroundColor: "white",
   },
   list: {
     flex: 1,
     marginTop: 20,
+  },
+  titleStyle: {
+    color: "#fff",
+    paddingHorizontal: 10,
   },
 });
