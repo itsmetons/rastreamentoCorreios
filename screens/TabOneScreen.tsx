@@ -3,51 +3,78 @@ import { useNavigation } from "@react-navigation/native";
 import {
   SafeAreaView,
   FlatList,
-  StatusBar,
   StyleSheet,
   TouchableOpacity,
   TextInput,
   Modal,
+  Image,
+  ActivityIndicator,
 } from "react-native";
+import Flag from "react-native-flags-typescript";
 import BannerAdMob from "./../components/admob/banner";
 import { Text, View } from "../components/Themed";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import addPackage from "../functions/addPackage";
+import TracksDb from "../services/db";
+import moment from "moment";
 
 export default function TabOneScreen() {
+  const [data, setData] = useState([]);
+  const [packageDescription, setPackageDescription] = useState("");
+  const [packageCode, setPackageCode] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
+
   useEffect(() => {
     loadTracks();
   }, []);
 
   const loadTracks = async () => {
-    const tracks: any = await AsyncStorage.getItem("@storage_tracks");
-    setData(tracks != null ? JSON.parse(tracks) : []);
+    const tracks: any = [];
+    TracksDb.transaction(
+      (tx) => {
+        tx.executeSql(
+          "select id, code, description, delivered, lastUpdateDate from tracks",
+          [],
+          (trans, { rows }) => {
+            for (var i = 0; i < rows.length; i++) {
+              const item = rows.item(i);
+              tracks.push({
+                id: item.id,
+                description: item.description,
+                code: item.code,
+                lastUpdateDate: moment(item.lastUpdateDate).format(
+                  "DD/MM/YYYY HH:mm"
+                ),
+              });
+              console.log(item);
+            }
+          }
+        );
+      },
+      (error) => {
+        console.log(error);
+      },
+      () => {
+        setData(tracks);
+      }
+    );
   };
 
   const navegation = useNavigation();
+
   const viewTimeLine = (track: any) => {
     navegation.navigate("TimeLine", { track });
   };
 
-  const [data, setData] = useState([]);
-  const [packageDescription, setPackageDescription] = useState("");
-  const [packageCode, setPackageCode] = useState("");
-
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const clickHandler = () => {
+  const showModalHandler = async () => {
     setModalVisible(true);
   };
 
-  const addPackage = async () => {
-    const tracks: any = data ?? [];
-    tracks.push({ description: packageDescription, code: packageCode });
-    console.log(tracks);
-
-    await AsyncStorage.setItem("@storage_tracks", JSON.stringify(tracks));
+  const addHandler = async () => {
+    setModalVisible(false);
+    await addPackage({ code: packageCode, description: packageDescription });
     setPackageCode("");
-    setPackageDescription("")
+    setPackageDescription("");
     loadTracks();
-    clickHandler()
   };
 
   return (
@@ -57,7 +84,8 @@ export default function TabOneScreen() {
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => {
-          alert("Modal has been closed.");
+          setPackageCode("");
+          setPackageDescription("");
         }}
       >
         <View style={styles.centeredView}>
@@ -101,7 +129,7 @@ export default function TabOneScreen() {
                   color: "#008000",
                 }}
                 onPress={() => {
-                  addPackage();
+                  addHandler();
                 }}
               >
                 SALVAR
@@ -113,6 +141,7 @@ export default function TabOneScreen() {
 
       <FlatList
         data={data}
+        keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }: any) => (
           <TouchableOpacity
             onPress={() => {
@@ -120,8 +149,22 @@ export default function TabOneScreen() {
             }}
           >
             <View style={styles.item}>
-              <Text style={styles.title}>{item.description}</Text>
-              <Text>{item.code}</Text>
+              <View
+                style={{ flexDirection: "row", backgroundColor: "transparent" }}
+              >
+                <Text style={styles.title}>{item.description}</Text>
+                <Flag type="flat" size={32} code={item.code.slice(-2)} />
+              </View>
+              <View
+                style={{ flexDirection: "row", backgroundColor: "transparent" }}
+              >
+                <Text style={{ width: "50%", textAlign: "left" }}>
+                  {item.code}
+                </Text>
+                <Text style={{ width: "50%", textAlign: "right" }}>
+                  {item.lastUpdateDate}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
         )}
@@ -129,7 +172,7 @@ export default function TabOneScreen() {
 
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={clickHandler}
+        onPress={showModalHandler}
         style={styles.touchableOpacityStyle}
       >
         <Text style={styles.floatingButtonStyle}>+</Text>
@@ -142,7 +185,7 @@ export default function TabOneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: StatusBar.currentHeight || 0,
+    marginTop: 8,
   },
   input: {
     marginTop: 0,
@@ -156,13 +199,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   item: {
-    backgroundColor: "#f9c2ff",
+    backgroundColor: "#b0bec5",
     padding: 20,
     marginVertical: 8,
     marginHorizontal: 16,
+    borderRadius: 8,
   },
   title: {
     fontSize: 32,
+    flex: 1,
   },
   touchableOpacityStyle: {
     position: "absolute",
@@ -176,7 +221,7 @@ const styles = StyleSheet.create({
   },
   floatingButtonStyle: {
     textAlign: "center",
-    color: "#000",
+    color: "#fabe3d",
     height: "100%",
     width: "100%",
     shadowColor: "#000",
@@ -188,7 +233,7 @@ const styles = StyleSheet.create({
     shadowRadius: 9,
     elevation: 5,
     fontSize: 40,
-    backgroundColor: "#fabe3d",
+    backgroundColor: "#455a64",
     borderRadius: 50,
   },
   modalButton: {
@@ -218,7 +263,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    marginBottom: 15,
+    paddingBottom: 15,
     textAlign: "left",
     width: "100%",
     padding: 16,

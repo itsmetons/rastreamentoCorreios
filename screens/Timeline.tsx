@@ -5,7 +5,9 @@ import { Text, View } from "../components/Themed";
 import Timeline from "react-native-timeline-flatlist";
 import Api from "../services/api";
 import { Ionicons } from "@expo/vector-icons";
-
+import TracksDb from "../services/db";
+import moment from "moment";
+import PackageDetails from "../components/packageDetails";
 export default function TimeLine({
   route,
   navigation,
@@ -13,50 +15,67 @@ export default function TimeLine({
   route: any;
   navigation: any;
 }) {
-  const deliveryIcon = require("../assets/images/delivery-car.png");
   const [data, setData] = useState([]);
+  const [delivered, setDelivered] = useState(false);
+  const [createDate, setCreateDate] = useState("");
+  const [lastUpdateDate, setLastUpdateDate] = useState("");
 
   const loadTrack = async (track: any) => {
     const logs: any = [];
-    const response = await Api.post("rastreio", {
-      type: "LS",
-      code: track.code,
-    });
-
-    response.data.objeto[0].evento.forEach((item: any, index: any) => {
-      logs.push({
-        time: (item.data + " " + item.hora).replace(" ", "\n"),
-        title: item.descricao,
-        description:
-          item.unidade.local +
-          (typeof item.unidade.cidade !== "undefined" &&
-          item.unidade.cidade !== null
-            ? "\n" + item.unidade.cidade + "/" + item.unidade.uf
-            : ""),
-        icon: (
-          <Ionicons
-            name="location"
-            size={30}
-            color="rgb(45,156,219)"
-          ></Ionicons>
-        ),
-      });
-    });
-
-    console.log(logs);
-
-    setData(logs);
+    TracksDb.transaction(
+      (tx) => {
+        tx.executeSql(
+          "select dateTime, description, locale, localeDetails, " +
+            "(select delivered from tracks where tracks.code = tracks_logs.code ) delivered, " +
+            "(select createDate from tracks where tracks.code = tracks_logs.code ) createDate, " +
+            "(select lastUpdateDate from tracks where tracks.code = tracks_logs.code ) lastUpdateDate  from tracks_logs where code = ?",
+          [track],
+          (trans, { rows }) => {
+            for (var i = 0; i < rows.length; i++) {
+              const item = rows.item(i);
+              setDelivered(item === 0 ? false : true);
+              setLastUpdateDate(item.lastUpdateDate);
+              setCreateDate(item.createDate);
+              logs.push({
+                time: moment(item.dateTime).format("DD/MM/YYYY[\n]HH:mm"),
+                title: item.description,
+                description: item.locale + "\n" + item.localeDetails,
+                icon: (
+                  <Ionicons
+                    name="location"
+                    size={30}
+                    color="rgb(45,156,219)"
+                  ></Ionicons>
+                ),
+              });
+            }
+          }
+        );
+      },
+      (error) => {
+        console.log(error);
+      },
+      () => {
+        setData(logs);
+      }
+    );
   };
 
   const { track } = route.params;
   useEffect(() => {
-    loadTrack(track);
+    loadTrack(track.code);
   }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={{ color: "#000" }}>{track.description}</Text>
-      <Text style={{ color: "#000", fontSize: 20 }}>{track.code}</Text>
+      <Text>{track.description}</Text>
+      <Text style={{ fontSize: 20 }}>{track.code}</Text>
+      <PackageDetails
+        code={track.code}
+        delivered={delivered}
+        lastUpdateDate={lastUpdateDate}
+        createDate={createDate}
+      />
       <Timeline
         style={styles.list}
         data={data}
@@ -70,7 +89,6 @@ export default function TimeLine({
           textAlign: "center",
           paddingVertical: 10,
           paddingHorizontal: 5,
-          color: "#fff",
         }}
       />
     </View>
@@ -89,7 +107,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   titleStyle: {
-    color: "#fff",
     paddingHorizontal: 10,
   },
 });

@@ -1,7 +1,7 @@
 import React from "react";
 import { AdMobBanner, setTestDeviceIDAsync } from "expo-ads-admob";
 
-export default function BannerAdMob() {
+const BannerAdMob = () => {
   setTestDeviceIDAsync("EMULATOR");
   return (
     <AdMobBanner
@@ -10,4 +10,6 @@ export default function BannerAdMob() {
       servePersonalizedAds // true or false
     />
   );
-}
+};
+
+export default BannerAdMob;
