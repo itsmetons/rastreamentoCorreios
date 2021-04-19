@@ -22,11 +22,11 @@ execute("drop tracks_logs", "drop table tracks_logs");
 
 execute(
   "create tracks",
-  "create table if not exists `tracks` (`id` integer primary key not null, `code` TEXT, `description` TEXT, 'delivered' INTEGER, createDate TEXT, lastUpdateDate TEXT)"
+  "create table if not exists tracks (id integer primary key not null, code TEXT, description TEXT, delivered INTEGER, createDate TEXT, lastUpdateDate TEXT)"
 );
 execute(
   "create tracks_logs",
-  "create table if not exists `tracks_logs` (`id` integer primary key not null, `code` TEXT, `dateTime` TEXT, `description` TEXT, `locale` TEXT, `localeDetails` TEXT)"
+  "create table if not exists tracks_logs (id integer primary key not null, code TEXT, dateTime TEXT, description TEXT, locale TEXT, localeDetails TEXT)"
 );
 
 export default TracksDb;

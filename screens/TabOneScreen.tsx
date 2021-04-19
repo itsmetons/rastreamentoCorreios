@@ -32,7 +32,8 @@ export default function TabOneScreen() {
     TracksDb.transaction(
       (tx) => {
         tx.executeSql(
-          "select id, code, description, delivered, lastUpdateDate from tracks",
+          "select id, code, description, delivered, lastUpdateDate, " +
+            "(select description from tracks_logs where tracks_logs.code = tracks.code order by dateTime desc LIMIT 1) status from tracks",
           [],
           (trans, { rows }) => {
             for (var i = 0; i < rows.length; i++) {
@@ -40,6 +41,7 @@ export default function TabOneScreen() {
               tracks.push({
                 id: item.id,
                 description: item.description,
+                status: item.status ?? "NÃO ENCONTRADO",
                 code: item.code,
                 lastUpdateDate: moment(item.lastUpdateDate).format(
                   "DD/MM/YYYY HH:mm"
@@ -62,7 +64,9 @@ export default function TabOneScreen() {
   const navegation = useNavigation();
 
   const viewTimeLine = (track: any) => {
-    navegation.navigate("TimeLine", { track });
+    if (track.status !== "NÃO ENCONTRADO") {
+      navegation.navigate("TimeLine", { track });
+    }
   };
 
   const showModalHandler = async () => {
@@ -153,7 +157,12 @@ export default function TabOneScreen() {
                 style={{ flexDirection: "row", backgroundColor: "transparent" }}
               >
                 <Text style={styles.title}>{item.description}</Text>
-                <Flag type="flat" size={32} code={item.code.slice(-2)} />
+                <Flag
+                  style={styles.flags}
+                  type="flat"
+                  size={32}
+                  code={item.code.slice(-2)}
+                />
               </View>
               <View
                 style={{ flexDirection: "row", backgroundColor: "transparent" }}
@@ -163,6 +172,23 @@ export default function TabOneScreen() {
                 </Text>
                 <Text style={{ width: "50%", textAlign: "right" }}>
                   {item.lastUpdateDate}
+                </Text>
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  backgroundColor: "transparent",
+                }}
+              >
+                <Text
+                  style={{
+                    width: "100%",
+                    textTransform: "uppercase",
+                    paddingTop: 2,
+                    textAlign: "left",
+                  }}
+                >
+                  {">>> " + item.status}
                 </Text>
               </View>
             </View>
@@ -187,6 +213,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 8,
   },
+  flags: { alignContent: "flex-end", alignSelf: "flex-end" },
   input: {
     marginTop: 0,
     width: "100%",
